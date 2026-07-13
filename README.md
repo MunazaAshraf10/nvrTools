@@ -15,7 +15,7 @@ of one paid window, which it deletes 48 hours after the report.
 This box is the opposite. It keeps **whole video, forever**, because a model has to be
 trained on something before any of that can work.
 
-So it writes to its own bucket, `padelytix-training`, which has **no lifecycle rule**.
+So it writes to its own bucket, `padelytix-training-<account-id>`, which has **no lifecycle rule**.
 Do not point it at the app's media bucket: that bucket deletes its contents after 48
 hours and would quietly eat the dataset.
 
@@ -78,7 +78,7 @@ especially Tailscale: if you cannot SSH in from home, every future fix is a driv
 
 ```bash
 ffprobe "rtsp://viewer:PASS@<ip>:554/unicast/c1/s0/live"                      # box sees the camera
-sudo -u padelytix aws s3 cp /etc/hostname s3://padelytix-training/_test.txt   # box reaches S3
+sudo -u padelytix aws s3 cp /etc/hostname s3://padelytix-training-<account-id>/_test.txt   # box reaches S3
 sudo tailscale up --ssh                                                       # you reach the box
 ```
 
@@ -106,7 +106,7 @@ anybody could walk off with it, so its key should not be able to empty a bucket.
 | `/etc/padelytix/cameras.env` | the camera list and the bucket. The only file you edit. |
 | `/opt/padelytix/*.sh` | record, upload, session |
 | `/var/lib/padelytix/footage/<cam>/` | segments in flight, deleted once in S3 |
-| `s3://padelytix-training/<cam>/<date>/` | where they land |
+| `s3://padelytix-training-<account-id>/<cam>/<date>/` | where they land |
 
 ## Adding a camera
 

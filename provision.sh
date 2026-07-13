@@ -82,7 +82,7 @@ Three things left, and each is a one line proof. Do them before you leave.
      cannot, and nothing below matters yet.
 
   2. AWS. Edit /var/lib/padelytix/.aws/credentials, then:
-       sudo -u padelytix aws s3 cp /etc/hostname s3://padelytix-training/_test.txt
+       sudo -u padelytix aws s3 cp /etc/hostname s3://padelytix-training-<account-id>/_test.txt
      That proves the outbound path works from behind the court's router.
 
   3. Remote access, so you never have to drive back:

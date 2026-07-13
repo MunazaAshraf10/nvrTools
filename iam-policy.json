@@ -5,7 +5,7 @@
       "Sid": "AddFootageOnly",
       "Effect": "Allow",
       "Action": "s3:PutObject",
-      "Resource": "arn:aws:s3:::padelytix-training/*"
+      "Resource": "arn:aws:s3:::padelytix-training-<account-id>/*"
     }
   ]
 }

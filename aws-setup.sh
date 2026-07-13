@@ -10,17 +10,26 @@
 # Idempotent. Safe to run again; it skips what already exists.
 set -euo pipefail
 
-BUCKET="${BUCKET:-padelytix-training}"
 REGION="${REGION:-ap-southeast-1}"
 IAM_USER="${IAM_USER:-padelytix-court-box}"
 POLICY_NAME="${POLICY_NAME:-padelytix-court-box-put}"
 
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 command -v aws >/dev/null || { echo "aws cli not installed" >&2; exit 1; }
 
 ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
-echo "==> account ${ACCOUNT}, region ${REGION}"
+
+# Suffixed with the account id, because S3 bucket names are global: without it,
+# the name is one somebody else may already have taken. Matches the app's own
+# padelytix-media-<account> and padelytix-reports-<account>.
+BUCKET="${BUCKET:-padelytix-training-${ACCOUNT}}"
+
+echo "==> account ${ACCOUNT}, region ${REGION}, bucket ${BUCKET}"
+
+if [[ "$(aws sts get-caller-identity --query Arn --output text)" == *":root" ]]; then
+    echo "!!  You are running as ROOT. It will work, but a root key cannot be"
+    echo "!!  scoped or safely revoked. Make an IAM admin user and use that."
+fi
 
 # ---------------------------------------------------------------- the bucket
 
@@ -64,7 +73,7 @@ else
     aws iam create-policy \
         --policy-name "$POLICY_NAME" \
         --description "Court box: add training footage, nothing else" \
-        --policy-document "file://${HERE}/iam-policy.json" >/dev/null
+        --policy-document "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"AddFootageOnly\",\"Effect\":\"Allow\",\"Action\":\"s3:PutObject\",\"Resource\":\"arn:aws:s3:::${BUCKET}/*\"}]}" >/dev/null
 fi
 
 if aws iam get-user --user-name "$IAM_USER" >/dev/null 2>&1; then
