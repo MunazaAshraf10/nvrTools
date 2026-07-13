@@ -134,12 +134,17 @@ does not. The footage is safe on disk meanwhile, which is the point of the desig
 
 ## Sizing and cost
 
-Two cameras, five hours a night, H.265 at roughly 5 Mbps is about **22 GB a night**,
-near 650 GB a month, roughly **$15/month** in S3 Singapore for the first month and less
-as Intelligent Tiering ages it down. Upload needs about 10 Mbps sustained.
+Two cameras, five hours a night, H.265 at the 8 to 10 Mbps the camera settings above
+call for, is roughly **40 GB a night** and **1.2 TB a month**. Call it **$25 to $30 a
+month** in S3 Singapore for the first month, dropping as Intelligent Tiering ages it
+into colder classes. Upload needs about 20 Mbps sustained.
+
+Those numbers are about double what the camera defaults would give you. The defaults
+are cheaper because they are throwing away the detail you are collecting this for.
+Paying $15 a month for a dataset the model cannot learn from is the expensive option.
 
 Uploads drain the disk continuously, so local storage only has to cover a backlog:
-256 GB holds about ten nights with the internet down.
+256 GB holds about six nights with the internet down.
 
 ## The hardware
 
@@ -159,8 +164,31 @@ disk is around 10 Mbps in and 10 Mbps out, and `-c copy` barely touches the CPU.
 **The scripts do not change between any of them.** That is the point of them, and it is
 why the hardware choice is not worth agonising over.
 
-## Check the camera fps before collecting a few hundred GB
+## Camera settings
 
-Most UNV cameras are 30fps. Padel is fast, and if the model later turns out to need
-60fps for ball tracking, every frame collected until then is training data at the wrong
-rate. Worth pinning down on day one, not month three.
+Set these on the cameras **before collecting a single night**. Footage shot with the
+defaults is not a smaller dataset, it is a worse one, and no amount of it adds up to
+the good kind. Every one of these is a setting, not a purchase.
+
+| Setting | Set to | Why |
+|---|---|---|
+| **Shutter / max exposure** | **1/500s**, 1/250s at the floor | The one that matters most. See below. |
+| **Smart codec** (U-Code, H.265+) | **OFF** | Content-adaptive encoding with long GOPs and aggressive frame skipping. Built to shrink storage for a human reviewing an incident, and it destroys exactly the detail a model needs. On by default, looks fine to the eye, quietly wrecks a training set. |
+| **Bitrate** | CBR, 8 to 10 Mbps | Do not let VBR starve the fast rallies. VBR decides "lots of motion, drop quality" at precisely the moment the footage matters. |
+| **I-frame interval (GOP)** | 30, one per second | Makes seeking to a window cheap, and limits how far a corrupt frame propagates. |
+| **OSD / timestamp overlay** | OFF | Burnt into the pixels forever. One more thing for the model to learn to ignore. |
+| **Stream** | main (`s0`), full resolution | The sub stream is a low resolution preview and is worthless. |
+
+### Blur is the enemy, not frame rate
+
+These matches are played at night under floodlights. Left alone the camera drags its
+shutter to gather light, and at 1/30s a struck ball becomes a metre-long smear that no
+tracker can localise. Freezing it costs brightness and buys noise, and that is a trade
+worth making every time: a model can be trained through noise, and cannot be trained
+through a ball that is not in the frame as a ball.
+
+**30fps is enough.** The stats this feeds are player metrics, distance run and court
+coverage, and a player moves 17cm between frames at 30fps. Even ball tracking is
+workable there: TrackNet was built on 30fps broadcast tennis, and padel is the slower
+game, with a depressurised ball on a 20x10m court. Do not go buying 60fps cameras.
+Go and fix the shutter speed.
