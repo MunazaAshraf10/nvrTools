@@ -84,19 +84,20 @@ sudo tailscale up --ssh                                                       # 
 
 ## AWS setup, once
 
+From any machine with admin credentials, not from the court box:
+
 ```bash
-aws s3 mb s3://padelytix-training --region ap-southeast-1
-aws s3api put-public-access-block --bucket padelytix-training \
-  --public-access-block-configuration \
-  BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+./aws-setup.sh
 ```
 
-No lifecycle rule. This is the one bucket that keeps things.
+It creates the bucket (private, encrypted, and with **no lifecycle rule**, because this
+is the one bucket that keeps things) and an IAM user whose only power is `s3:PutObject`
+on it. Then it prints an access key, once, which goes on the court box and nowhere
+else.
 
-Give the box an IAM user whose only power is to add footage: see
-[iam-policy.json](iam-policy.json). It cannot read, cannot delete, and cannot touch any
-other bucket. A box that sits in a public sports venue, that anybody could walk off
-with, should not hold a key that can empty a bucket.
+The key cannot read the bucket, cannot delete from it, and cannot see any other bucket.
+See [iam-policy.json](iam-policy.json). That box sits in a public sports venue where
+anybody could walk off with it, so its key should not be able to empty a bucket.
 
 ## Layout
 
