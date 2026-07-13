@@ -1,0 +1,23 @@
+[Unit]
+# One instance per camera: padelytix-record@court1_left.service
+Description=Padelytix footage capture (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+ExecStart=/opt/padelytix/record.sh %i
+
+# A camera that drops off the network comes back on its own. Without this, one
+# blip at 19:20 costs the whole night.
+Restart=always
+RestartSec=5s
+
+User=padelytix
+Group=padelytix
+StateDirectory=padelytix
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true

@@ -1,0 +1,11 @@
+[Unit]
+Description=Drain finished footage segments to S3
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/padelytix/upload.sh
+User=padelytix
+Group=padelytix
+StateDirectory=padelytix

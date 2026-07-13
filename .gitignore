@@ -1,0 +1,8 @@
+# The real camera list. It holds RTSP passwords, and it belongs on the box, not
+# in git. cameras.env.example is the one that ships.
+cameras.env
+
+# Footage never belongs in the repo.
+*.mp4
+*.mkv
+footage/

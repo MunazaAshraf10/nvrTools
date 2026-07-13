@@ -1,0 +1,13 @@
+[Unit]
+# Starts every camera at 19:00. Stopped by padelytix-session-stop at 00:00.
+#
+# The cameras are listed once, in cameras.env, and read from there. Adding a
+# camera is a line in that file plus a restart, not an edit to a unit.
+Description=Padelytix recording session (start all cameras)
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+EnvironmentFile=/etc/padelytix/cameras.env
+ExecStart=/opt/padelytix/session.sh start
+ExecStop=/opt/padelytix/session.sh stop
