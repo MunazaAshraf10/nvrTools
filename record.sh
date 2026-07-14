@@ -23,12 +23,25 @@ mkdir -p "$OUT"
 # rtsp_transport tcp: UDP silently drops packets under load and corrupts frames.
 # timeout: give up on a dead camera after 10s (microseconds here) so systemd can
 # restart us, rather than hanging forever on a socket that will never answer.
+#
+# -an drops the audio, and it is not an optimisation. The cameras offer G.711
+# (pcm_mulaw), which MP4 cannot hold, so the muxer refuses to write a header and
+# ffmpeg dies before a single byte reaches disk. Every segment comes out zero
+# bytes and the service restart-loops forever.
+#
+# Dropping it is the right answer anyway. Audio is useless for training a model
+# that measures how people move, and a camera at a public venue should not be
+# recording the conversations of people who came to play padel.
+#
+# -tag:v hvc1 tags the HEVC stream the way QuickTime and Apple tools expect, so
+# the segments open anywhere rather than only in ffmpeg.
 exec ffmpeg \
   -hide_banner -loglevel warning \
   -rtsp_transport tcp \
   -timeout 10000000 \
   -i "$RTSP_URL" \
-  -c copy \
+  -map 0:v:0 -an \
+  -c copy -tag:v hvc1 \
   -f segment \
   -segment_time 600 \
   -segment_format mp4 \
