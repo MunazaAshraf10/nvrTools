@@ -33,18 +33,29 @@ mkdir -p "$OUT"
 # that measures how people move, and a camera at a public venue should not be
 # recording the conversations of people who came to play padel.
 #
-# -tag:v hvc1 tags the HEVC stream the way QuickTime and Apple tools expect, so
-# the segments open anywhere rather than only in ffmpeg.
+# Matroska, not MP4, and this is not a preference.
+#
+# MP4 writes its index (the moov atom) when the file closes, so a segment that
+# was interrupted is not a short video, it is an unreadable one. Kill ffmpeg,
+# lose power, pull a plug: ten minutes of footage becomes garbage. A truncated
+# MKV simply plays up to the point it stopped.
+#
+# It is also the tolerant container. A camera whose HEVC parameter sets do not
+# arrive cleanly at the head of a segment produces an MP4 that ffmpeg itself
+# cannot read back, and an MKV that reads fine. We hit exactly that.
+#
+# Nothing downstream cares: ffmpeg, OpenCV, decord and every torch loader read
+# MKV without noticing.
 exec ffmpeg \
   -hide_banner -loglevel warning \
   -rtsp_transport tcp \
   -timeout 10000000 \
   -i "$RTSP_URL" \
   -map 0:v:0 -an \
-  -c copy -tag:v hvc1 \
+  -c copy \
   -f segment \
   -segment_time 600 \
-  -segment_format mp4 \
+  -segment_format matroska \
   -reset_timestamps 1 \
   -strftime 1 \
-  "${OUT}/%Y-%m-%d_%H-%M-%S.mp4"
+  "${OUT}/%Y-%m-%d_%H-%M-%S.mkv"

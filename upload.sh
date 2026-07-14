@@ -17,7 +17,7 @@ source /etc/padelytix/cameras.env
 
 FOOTAGE=/var/lib/padelytix/footage
 
-find "$FOOTAGE" -type f -name '*.mp4' -mmin +11 -print0 | while IFS= read -r -d '' file; do
+find "$FOOTAGE" -type f -name '*.mkv' -mmin +11 -print0 | while IFS= read -r -d '' file; do
     cam=$(basename "$(dirname "$file")")
     name=$(basename "$file")
     day=${name%%_*}
