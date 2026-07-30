@@ -1,8 +1,0 @@
-[Unit]
-Description=Stop recording at 00:00
-
-[Timer]
-OnCalendar=*-*-* 00:00:00
-
-[Install]
-WantedBy=timers.target

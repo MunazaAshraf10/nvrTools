@@ -169,38 +169,38 @@ the court WiFi you would be proving nothing, because you are already on the LAN.
 
 If this does not work, fix it now. Every future fix is a drive to the court otherwise.
 
-## 9. Dry run, without waiting for 19:00
+## 9. Check recording
+
+Recording is always on: `provision.sh` enabled `padelytix-session.service` at boot, so the
+cameras record continuously with no time window. Confirm segments are appearing:
 
 ```bash
-sudo systemctl start padelytix-session
 sleep 90
 ls -la /var/lib/padelytix/footage/*/     # .mkv files appearing and growing?
 ```
 
-Wait for a segment to close (they rotate every 10 minutes), then:
+Wait for a segment to close (they rotate every 10 minutes), then run the sync:
 
 ```bash
 sudo systemctl start padelytix-sync
 aws s3 ls s3://padelytix-training-<account-id>/ --recursive
 ```
 
-Only segments inside a booked window reach the bucket, so for this dry run make sure there is
-a booked (scheduled/pending/active) session on this court that overlaps now, or the sync will
+Only segments inside a booked window reach the bucket, so for this check make sure there is a
+booked (scheduled/pending/active) session on this court that overlaps now, or the sync will
 correctly upload nothing. Footage in the bucket for a booked window means the whole chain
-works. Then stop it:
+works.
+
+## 10. Confirm it survives a reboot
 
 ```bash
-sudo systemctl stop padelytix-session
+systemctl is-enabled padelytix-session.service   # enabled -> records on boot
+systemctl list-timers 'padelytix-*'              # padelytix-sync every 5 minutes
 ```
 
-## 10. Hand it over to the timers
-
-```bash
-systemctl list-timers 'padelytix-*'
-```
-
-You should see the session starting at 19:00, stopping at 00:00, and the sync every
-5 minutes. Nothing more to do: it runs tonight on its own.
+Recording is enabled at boot and the sync runs every 5 minutes. There is no start/stop
+window: the box records around the clock and keeps only what a session booked. Nothing more
+to do.
 
 Close the lid. Leave it plugged into power and ethernet. Go home.
 

@@ -70,7 +70,7 @@ systemctl restart systemd-logind
 echo "==> units"
 install -m 0644 "$HERE"/systemd/*.service "$HERE"/systemd/*.timer /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable --now padelytix-session.timer padelytix-session-stop.timer padelytix-sync.timer
+systemctl enable --now padelytix-session.service padelytix-sync.timer
 
 cat <<'EOF'
 
@@ -92,12 +92,12 @@ Three things left, and each is a one line proof. Do them before you leave.
        sudo tailscale up --ssh
      Then SSH to it from home. TEST THIS WHILE YOU ARE STILL AT THE COURT.
 
-Then dry run tonight's session without waiting for 19:00:
+Recording is always on (started at boot, no time window). Check it is capturing now:
 
-    sudo systemctl start padelytix-session
-    ls -la /var/lib/padelytix/footage/*/     # segments appearing?
+    ls -la /var/lib/padelytix/footage/*/     # segments appearing and growing?
     sudo systemctl start padelytix-sync      # do booked ones reach S3?
-    sudo systemctl stop padelytix-session
+
+Only footage inside a booked session is kept; everything else is dropped by the sync step.
 
 Watch it live:
     journalctl -fu 'padelytix-*'

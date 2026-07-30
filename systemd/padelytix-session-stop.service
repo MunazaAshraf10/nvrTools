@@ -1,6 +1,0 @@
-[Unit]
-Description=Stop the recording session
-
-[Service]
-Type=oneshot
-ExecStart=/bin/systemctl stop padelytix-session.service

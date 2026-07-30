@@ -1,9 +1,14 @@
 [Unit]
-# Starts every camera at 19:00. Stopped by padelytix-session-stop at 00:00.
+# Starts every camera and keeps them running. Enabled at boot, so the box records
+# continuously: there is no start/stop window any more. Which footage is KEPT is decided by
+# the sync step (only segments inside a booked session), not by when we record. So a match
+# booked at any hour is captured, and everything else is dropped.
 #
-# The cameras are listed once, in cameras.env, and read from there. Adding a
-# camera is a line in that file plus a restart, not an edit to a unit.
-Description=Padelytix recording session (start all cameras)
+# The cameras are listed once, in cameras.env, and read from there. Adding a camera is a
+# line in that file plus a restart, not an edit to a unit.
+Description=Padelytix recording (all cameras, always on)
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=oneshot
@@ -11,3 +16,6 @@ RemainAfterExit=true
 EnvironmentFile=/etc/padelytix/cameras.env
 ExecStart=/opt/padelytix/session.sh start
 ExecStop=/opt/padelytix/session.sh stop
+
+[Install]
+WantedBy=multi-user.target
