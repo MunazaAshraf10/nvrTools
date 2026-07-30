@@ -15,7 +15,9 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "==> packages"
 apt-get update -qq
-apt-get install -y -qq ffmpeg awscli curl
+# jq parses the booking plan the sync step fetches; openssl signs that request. curl fetches
+# it. All small, all standard.
+apt-get install -y -qq ffmpeg awscli curl jq openssl
 
 echo "==> a user that owns the footage and nothing else"
 if ! id padelytix &>/dev/null; then
@@ -25,7 +27,7 @@ install -d -o padelytix -g padelytix /var/lib/padelytix/footage
 
 echo "==> scripts"
 install -d /opt/padelytix
-install -m 0755 "$HERE/record.sh" "$HERE/upload.sh" "$HERE/session.sh" /opt/padelytix/
+install -m 0755 "$HERE/record.sh" "$HERE/sync.sh" "$HERE/session.sh" /opt/padelytix/
 
 echo "==> config"
 install -d /etc/padelytix
@@ -68,7 +70,7 @@ systemctl restart systemd-logind
 echo "==> units"
 install -m 0644 "$HERE"/systemd/*.service "$HERE"/systemd/*.timer /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable --now padelytix-session.timer padelytix-session-stop.timer padelytix-upload.timer
+systemctl enable --now padelytix-session.timer padelytix-session-stop.timer padelytix-sync.timer
 
 cat <<'EOF'
 
@@ -94,7 +96,7 @@ Then dry run tonight's session without waiting for 19:00:
 
     sudo systemctl start padelytix-session
     ls -la /var/lib/padelytix/footage/*/     # segments appearing?
-    sudo systemctl start padelytix-upload    # do they reach S3?
+    sudo systemctl start padelytix-sync      # do booked ones reach S3?
     sudo systemctl stop padelytix-session
 
 Watch it live:

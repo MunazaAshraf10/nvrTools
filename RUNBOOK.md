@@ -24,6 +24,13 @@ aws iam create-access-key --user-name padelytix-court-box
 
 Write both values down. AWS shows the secret once, and never again.
 
+The box also asks the app which windows are booked, so it keeps only that footage and drops
+the rest. For that you need two more values, both from us, not from AWS:
+
+- **VENUE_ID** for this venue (the admin console shows it).
+- **PDX_CAMERA_HMAC_SECRET**, the same shared secret the heartbeat signs with. The box signs
+  its plan request with it. Never commit it; it goes in `/etc/padelytix/cameras.env` only.
+
 ---
 
 ## 1. Get on the LAN
@@ -102,9 +109,10 @@ cd ~/nvrTools
 sudo ./provision.sh
 ```
 
-Installs ffmpeg and the AWS CLI, creates the `padelytix` service user, installs the
-systemd units, and disables sleep and lid-close. That last one is what stops a laptop
-quietly dying at 19:05 every night when the lid goes down.
+Installs ffmpeg, the AWS CLI, and jq (which parses the booking plan the box fetches), creates
+the `padelytix` service user, installs the systemd units, and disables sleep and lid-close.
+That last one is what stops a laptop quietly dying at 19:05 every night when the lid goes
+down.
 
 ## 6. Cameras
 
@@ -112,12 +120,17 @@ quietly dying at 19:05 every night when the lid goes down.
 sudo nano /etc/padelytix/cameras.env
 ```
 
-Real RTSP URLs, from step 4, the ones you proved. Main stream only.
+Real RTSP URLs, from step 4, the ones you proved. Main stream only. Name the cameras
+`court<N>_cam<M>` to match what the analysis reads (`court1_cam5`, `court1_cam13`): footage
+under any other prefix is invisible to the worker.
 
 ```
-CAM_court1_left=rtsp://viewer:PASS@<nvr-ip>:554/unicast/c1/s0/live
-CAM_court1_right=rtsp://viewer:PASS@<nvr-ip>:554/unicast/c2/s0/live
+CAM_court1_cam5=rtsp://viewer:PASS@<nvr-ip>:554/unicast/c1/s0/live
+CAM_court1_cam13=rtsp://viewer:PASS@<nvr-ip>:554/unicast/c2/s0/live
 S3_BUCKET=padelytix-training-<account-id>
+VENUE_ID=1
+PDX_API_BASE_URL=https://api.padelytix.com
+CAMERA_HMAC_SECRET=the-shared-camera-secret
 ```
 
 ## 7. AWS credentials
@@ -161,17 +174,20 @@ If this does not work, fix it now. Every future fix is a drive to the court othe
 ```bash
 sudo systemctl start padelytix-session
 sleep 90
-ls -la /var/lib/padelytix/footage/*/     # .mp4 files appearing and growing?
+ls -la /var/lib/padelytix/footage/*/     # .mkv files appearing and growing?
 ```
 
 Wait for a segment to close (they rotate every 10 minutes), then:
 
 ```bash
-sudo systemctl start padelytix-upload
+sudo systemctl start padelytix-sync
 aws s3 ls s3://padelytix-training-<account-id>/ --recursive
 ```
 
-Footage in the bucket means the whole chain works. Then stop it:
+Only segments inside a booked window reach the bucket, so for this dry run make sure there is
+a booked (scheduled/pending/active) session on this court that overlaps now, or the sync will
+correctly upload nothing. Footage in the bucket for a booked window means the whole chain
+works. Then stop it:
 
 ```bash
 sudo systemctl stop padelytix-session
@@ -183,7 +199,7 @@ sudo systemctl stop padelytix-session
 systemctl list-timers 'padelytix-*'
 ```
 
-You should see the session starting at 19:00, stopping at 00:00, and the upload every
+You should see the session starting at 19:00, stopping at 00:00, and the sync every
 5 minutes. Nothing more to do: it runs tonight on its own.
 
 Close the lid. Leave it plugged into power and ethernet. Go home.
@@ -200,14 +216,21 @@ aws s3 ls s3://padelytix-training-<account-id>/ --recursive --human-readable | t
 
 ## When something is wrong
 
-**Footage piling up on disk** means recording works and uploads do not. Check the AWS
-credentials. The footage is safe meanwhile, and will drain by itself once the path is
-fixed, which is the whole point of the design.
+**Footage piling up on disk** means recording works and the sync does not. Either the AWS
+credentials are wrong, or the app is unreachable so the box cannot tell which windows are
+booked (it keeps everything and retries rather than risk deleting a real match). Check the
+`padelytix-sync` journal: it says which. The footage is safe meanwhile and drains by itself
+once the path is fixed, which is the whole point of the design.
+
+**Footage recorded but never uploaded, even for a match that was played** means the sync
+fetched a plan with no booking covering that window. Confirm the session exists on this court
+(scheduled/pending/active/processing) and that `VENUE_ID` in `cameras.env` is this venue.
 
 **No footage at all** means the camera URL is wrong or the camera is unreachable. Go
 back to step 4.
 
 ```bash
-systemctl status padelytix-record@court1_left
-journalctl -u padelytix-record@court1_left -n 50
+systemctl status padelytix-record@court1_cam5
+journalctl -u padelytix-record@court1_cam5 -n 50
+journalctl -u padelytix-sync -n 50           # what the last sync decided to keep or drop
 ```
